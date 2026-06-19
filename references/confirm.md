@@ -45,6 +45,19 @@ These often don't crash a sanitizer (no memory corruption involved). For these:
 
 A logic finding without a worked example stays an "unconfirmed lead." Do not promote it.
 
+## Strategy for Go targets
+
+Go's runtime makes most bugs panics rather than corruption, so the "sanitizer" is usually just running the code and capturing the panic stack. Prefer, in order:
+
+1. **Native fuzzing** — if the path parses untrusted bytes, write a `FuzzXxx` target and run `go test -fuzz=FuzzXxx -fuzztime=60s`. A crasher written to `testdata/fuzz/` is a reproducible, maintainer-credible confirmation. This is the highest-value Go confirmation technique, the rough analog of port-and-isolate + ASan.
+2. **Targeted test driver** — a small `_test.go` that calls the path with the input that forces the bug (the error path for `go-nil-deref-after-error`, the out-of-range index for `go-slice-make-bounds`). Capture the `panic: runtime error: ...` line plus the goroutine stack; that stack is the proof, paste it into the report where ASan output would go.
+3. **Race detector** — for concurrency findings, `go test -race ./...`. A race report (with both stacks) is the confirmation.
+4. **`unsafe`/`cgo` paths only** — these can corrupt memory like C. Build with `CGO_ENABLED=1 go build -asan` (or `-race`, which also instruments some memory errors) to get a real OOB diagnostic. This is the only Go sub-class where you should expect a sanitizer-style report.
+
+Resource-exhaustion findings (huge `make` from an untrusted length) are confirmed by *demonstrating the scaling*, not by actually OOMing the host: show the allocation tracks the attacker field under a `GOMEMLIMIT`/`ulimit -v` cap, or instrument with `runtime.ReadMemStats`.
+
+Note severity honestly: an unrecovered panic in a CLI is low; the same panic reachable from an HTTP handler with no `recover` middleware is a remote DoS. If a framework `recover()` catches it, it's a per-request 500, not a process crash — say which.
+
 ## When confirmation fails
 
 If you cannot get the sanitizer to fire after a serious attempt:

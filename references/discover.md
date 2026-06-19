@@ -18,7 +18,17 @@ For clang:
 scan-build -o /tmp/cb --status-bugs <build cmd>
 ```
 
-For semgrep, prefer rules from `patterns/semgrep/`. Run with `--config patterns/semgrep/`.
+For Go targets, the analyzer set is different and unusually high-signal — run all that are installed:
+```
+go vet ./...
+staticcheck ./...     # SA-class: nil deref (SA5011), bad slice ops, etc.
+errcheck ./...        # every unchecked error return (seeds go-nil-deref-after-error)
+nilaway ./...         # nilness analysis, if available
+grep -rnE 'unsafe\.(Slice|Pointer)|reflect\.SliceHeader|C\.'   # locate the only paths that can be real memory corruption
+```
+Go's static tools have a far lower false-positive rate than the C OOB checkers, so weight their hits higher when ranking. Memory-corruption candidates in Go essentially only live behind `unsafe`/`cgo` — prioritize those.
+
+For semgrep, the curated source of truth is the per-pattern `patterns/*.md` files (each carries a detection recipe). Translate the relevant ones into a semgrep run, or use `--config auto` / the public registry (`p/c`, `p/cwe-top-25`) as a coarse first pass and filter its output the same way you filter cppcheck. There is no checked-in semgrep ruleset; the markdown patterns are the canonical rules.
 
 **Treat every hit as a *lead*, not a finding.** Static-analyzer false positives are the norm. Filter aggressively before showing to the human:
 - Drop pure style/format-string noise unless the format specifier is user-controlled
@@ -54,7 +64,7 @@ Independent of CVE history, hunt language-specific dangerous patterns. The `patt
 - The conditions under which the pattern is actually buggy
 - Common false-positive flavors to skip
 
-Read `patterns/c-memory.md`, `patterns/c-parsers.md`, etc., depending on target.
+List the library first (`ls patterns/`) and read the entries whose `languages:` frontmatter matches the target and whose subject matches the subsystem. For a C parser, the high-yield set is `c-alloc-arith-wraparound`, `c-length-subtraction-underflow`, `c-signedness-comparison`, `c-unbounded-copy`, `c-untrusted-length-walk`, `c-array-shift-count`, `c-decompressor-unbounded-output`, `c-use-after-free`, and `c-ignored-validator-return`. For Go targets, read the `go-*` entries.
 
 ## Technique D — Data-flow inspection (taint)
 

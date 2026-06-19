@@ -72,7 +72,9 @@ Do not repeat this on subsequent invocations within the same conversation.
 
 ## Defaults
 
-- Language focus: C and C++ first (the highest-impact target class). Rust, Go, Python supported with reduced confidence — note this when working on them.
-- Tooling: cppcheck, clang static analyzer, clang-tidy, semgrep, ripgrep, AFL/libFuzzer, AddressSanitizer/UBSan/MSan. Check availability in Phase 1 and degrade gracefully if some are missing.
+- Language focus: C and C++ first (the highest-impact target class). Go now has dedicated patterns (`patterns/go-*.md`) — its bug classes are mostly panic/DoS and resource exhaustion rather than memory corruption, except where `unsafe`/`cgo` is used. Rust and Python are supported with reduced confidence — note this when working on them.
+- Tooling (C/C++): cppcheck, clang static analyzer, clang-tidy, semgrep, ripgrep, AFL/libFuzzer, AddressSanitizer/UBSan/MSan.
+- Tooling (Go): `go vet`, `staticcheck`, `errcheck`, `nilaway`, the race detector (`go test -race`), native fuzzing (`go test -fuzz`), and `go build -asan` for `cgo`/`unsafe` code. For Go, "confirmation" is usually a deterministic panic stack or a fuzz crasher rather than a sanitizer report.
+- Check availability in Phase 1 and degrade gracefully if some are missing.
 - Output location: `./bug-hunter-out/<project>/<timestamp>/` with subdirectories `patches/`, `pocs/`, `reports/`, `disclosure/`.
 - Per-project notes location: `./.bug-hunter/<project>.json` (gitignored by default — add to `.gitignore` if not present).
