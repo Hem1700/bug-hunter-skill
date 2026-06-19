@@ -4,9 +4,9 @@ A reusable security-research skill for finding, confirming, chaining, and report
 
 ## What it does
 
-- **Audits** any C/C++ codebase for memory-safety, input-validation, logic, and data-flow bugs
+- **Audits** C/C++ codebases (primary focus) and Go for memory-safety, input-validation, logic, and data-flow bugs
 - **Ranks** candidates by confidence × reachability × severity-if-real
-- **Confirms** memory-safety candidates with sanitizer-level PoCs (ASan/UBSan/MSan)
+- **Confirms** memory-safety candidates with sanitizer-level PoCs (ASan/UBSan/MSan), and Go candidates with panic-stack reproducers, fuzz crashers, or the race detector
 - **Chains** related findings (data flow, multi-bug, variant analysis, pattern repetition)
 - **Generates** upstream-ready patches, reports, PoCs, and disclosure drafts
 - **Remembers** per-project context and a shared cross-project pattern library
@@ -33,6 +33,12 @@ references/                       phase-by-phase methodology
   memory.md                       per-project notes + shared library
   severity.md                     honest severity rubric
 patterns/                         shared cross-project pattern library
+  c-*.md                          C/C++ classes (alloc wraparound, unbounded copy,
+                                  length underflow, signedness, off-by-one shift,
+                                  decompressor output, untrusted-length walk,
+                                  ignored validator return, use-after-free)
+  go-*.md                         Go classes (nil-deref after ignored error,
+                                  slice/make bounds & resource exhaustion)
 templates/                        patch, report, PoC, disclosure formats
 examples/                         a real walkthrough (U-Boot)
 ```
@@ -45,6 +51,6 @@ The skill runs in five phases; phase 3 is a hand-off point where the human revie
 
 ## Adapting it
 
-- New language: add language-tagged entries under `patterns/` and adjust `references/discover.md` Technique A (the analyzer commands).
+- New language: add language-tagged entries under `patterns/` (set the `languages:` frontmatter), adjust `references/discover.md` Technique A (the analyzer commands), and add a confirmation strategy to `references/confirm.md`. The `go-*` patterns plus their `go vet`/`staticcheck`/fuzzing wiring are the worked example to copy — note that non-C languages often confirm via panic stacks or fuzz crashers rather than sanitizer reports.
 - New bug class: add a `patterns/<name>.md` file with the frontmatter, detection grep, "when buggy" / "false positives" sections, and verification recipe.
 - Project-specific gotchas: these go in per-project notes (created on first run), not the skill itself.
